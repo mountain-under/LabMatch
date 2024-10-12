@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:15 # 使用するPostgreSQLのバージョン
+    container_name: react-go_postgres_db
+    restart: always
+    env_file:
+      - .env  # 環境変数を指定
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}        # 環境変数でユーザー名を設定
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # 環境変数でパスワードを設定
+      POSTGRES_DB: ${POSTGRES_DB}            # 環境変数でデータベース名を設定
+    volumes:
+      - ./db/data:/var/lib/postgresql/data   # データの永続化
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql # 初期化スクリプトをマウント
+    ports:
+      - "5432:5432"  # PostgreSQLのデフォルトポート
+    
+
+  # 他のサービス（例：バックエンドやフロントエンド）もここに追加できます
+  backend:
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile
+    env_file:
+      - .env  # 環境変数を指定
+    volumes:
+      - ./backend/:/go/src/
+    # depends_on:
+    #   - db
+    
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    ports:
+      - "8080:8080"
+    # tty: true
+    # stdin_open: true
+
+  frontend:
+    build:
+      context: ./frontend/react-app
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend/react-app:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - "3000:3000"
+    # tty: true
+    # stdin_open: true
